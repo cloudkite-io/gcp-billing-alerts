@@ -13,9 +13,7 @@ def check_limits(
     days_to_average=7,
 ):
     n_days_ago = datetime.strftime(
-        datetime.utcnow() - timedelta(days=int(days_to_average) + 1), "%Y-%m-%d")
-    today = datetime.strftime(
-        datetime.utcnow(), "%Y-%m-%d")
+        datetime.utcnow() - timedelta(days=int(days_to_average)), "%Y-%m-%d")
 
     # Construct a BigQuery client object.
     client = bigquery.Client()
@@ -24,12 +22,12 @@ def check_limits(
     query = f"""
         SELECT project, usage_start_time, usage_end_time, cost, currency
         FROM `{source_bigquery_table_id}`
-        WHERE usage_start_time >= '{n_days_ago}' AND usage_end_time < '{today}'
+        WHERE usage_start_time >= '{n_days_ago}'
     """
     query_job = client.query(query)  # Make an API request.
     # Convert results into a Pandas DataFrame
     results_df = query_job.to_dataframe()
-
+    
     if not results_df.empty and len(results_df) > 1:
         currency = results_df.iloc[0].currency
 
@@ -75,10 +73,13 @@ def check_limits(
                 slack_msg["body"] += (
                     f"- Exceeded that of *{before_latest_data.usage_day}* by *{round(daily_perc_change, 2)}%*\n")
 
+        if len(agg_results_df) < int(days_to_average):
+            slack_msg["pretext"] = f"Only {len(agg_results_df)}/{days_to_average} days of data is available in BigQuery."
+        
         if slack_msg["body"]:
             send_slack_message(slack_msg)
         else:
-            print(f"No billing limits were exceeded for {latest_data.usage_day}.")
+            print(f"No billing limits have been exceeded on {latest_data.usage_day}.")
     else:
         print("The results returned by your Query parameters aren't sufficient for analysis!")
 

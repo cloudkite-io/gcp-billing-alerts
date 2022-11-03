@@ -13,6 +13,7 @@ def send_slack_message(msg):
                     "mrkdwn_in": ["text"],
                     "color": "warning",
                     "title": msg["title"],
+                    "pretext": msg.get("pretext", ""),
                     "fields": [
                         {
                             "title": msg["body_title"],
