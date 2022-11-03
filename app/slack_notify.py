@@ -1,7 +1,7 @@
 import os
 from slack_sdk.webhook import WebhookClient
 
-print(os.getenv('SOURCE_BIGQUERY_TABLE'))
+print(os.getenv('SOURCE_BIGQUERY_TABLE_ID'))
 webhook = WebhookClient(os.environ['SLACK_WEBHOOK_URL'])
 
 
