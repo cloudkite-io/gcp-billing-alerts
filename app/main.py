@@ -6,14 +6,14 @@ from slack_notify import send_slack_message
 
 
 def check_limits(
-    source_bigquery_table,
+    source_bigquery_table_id,
     average_upper_limit_amount_change,
     average_upper_limit_percentage_change, daily_upper_limit_amount_change,
     daily_upper_limit_percentage_change,
-    days_to_average=2,
+    days_to_average=7,
 ):
     n_days_ago = datetime.strftime(
-        datetime.utcnow() - timedelta(days=int(days_to_average)), "%Y-%m-%d")
+        datetime.utcnow() - timedelta(days=int(days_to_average) + 1), "%Y-%m-%d")
     today = datetime.strftime(
         datetime.utcnow(), "%Y-%m-%d")
 
@@ -23,14 +23,14 @@ def check_limits(
     # Build query
     query = f"""
         SELECT project, usage_start_time, usage_end_time, cost, currency
-        FROM `{source_bigquery_table}`
-        WHERE usage_start_time > '{n_days_ago}' AND usage_end_time < '{today}'
+        FROM `{source_bigquery_table_id}`
+        WHERE usage_start_time >= '{n_days_ago}' AND usage_end_time < '{today}'
     """
     query_job = client.query(query)  # Make an API request.
     # Convert results into a Pandas DataFrame
     results_df = query_job.to_dataframe()
 
-    if not results_df.empty:
+    if not results_df.empty and len(results_df) > 1:
         currency = results_df.iloc[0].currency
 
         results_df["usage_day"] = results_df.usage_end_time.apply(
@@ -43,7 +43,7 @@ def check_limits(
         agg_results_df.reset_index(inplace=True)
         agg_results_df.sort_values('usage_day', ascending=True)
 
-        average_cost = agg_results_df.cost.mean()
+        average_cost = agg_results_df.iloc[:-1].cost.mean()
         latest_data = agg_results_df.iloc[-1]
         before_latest_data = agg_results_df.iloc[-2]
 
@@ -58,12 +58,12 @@ def check_limits(
             if (avrg_change := latest_data.cost -
                     average_cost) > float(average_upper_limit_amount_change):
                 slack_msg["body"] += (
-                    f"- Exceeded *{days_to_average}-day* average by *{round(avrg_change, 2)} {currency}*\n")
+                    f"- Exceeded the last *{days_to_average}-day* average by *{round(avrg_change, 2)} {currency}*\n")
         if average_upper_limit_percentage_change:
             if (perc_change := (latest_data.cost - average_cost) /
                     average_cost * 100) > float(average_upper_limit_percentage_change):
                 slack_msg["body"] += (
-                    f"- Exceeded *{days_to_average}-day* average by *{round(perc_change, 2)}%*\n")
+                    f"- Exceeded the last *{days_to_average}-day* average by *{round(perc_change, 2)}%*\n")
         if daily_upper_limit_amount_change:
             if (daily_change := latest_data.cost -
                     before_latest_data.cost) > float(daily_upper_limit_amount_change):
@@ -80,11 +80,11 @@ def check_limits(
         else:
             print(f"No billing limits were exceeded for {latest_data.usage_day}.")
     else:
-        print("Query parameters returned no results!")
+        print("The results returned by your Query parameters aren't sufficient for analysis!")
 
 
 def main():
-    source_bigquery_table = os.environ['SOURCE_BIGQUERY_TABLE']
+    source_bigquery_table_id = os.environ['SOURCE_BIGQUERY_TABLE_ID']
     days_to_average = os.getenv('DAYS_TO_AVERAGE')
     average_upper_limit_amount_change = os.getenv(
         'AVERAGE_UPPER_LIMIT_AMOUNT_CHANGE')
@@ -95,7 +95,7 @@ def main():
     daily_upper_limit_percentage_change = os.getenv(
         'DAILY_UPPER_LIMIT_PERCENTAGE_CHANGE')
     print(f"Checking GCP billing limits:\n\
-            source_bigquery_table: {source_bigquery_table}\n\
+            source_bigquery_table_id: {source_bigquery_table_id}\n\
             days_to_average: {days_to_average}\n\
             average_upper_limit_amount_change: {average_upper_limit_amount_change}\n\
             average_upper_limit_percentage_change: {average_upper_limit_percentage_change}\n\
@@ -103,7 +103,7 @@ def main():
             daily_upper_limit_percentage_change: {daily_upper_limit_percentage_change}\n\
                 ")
     check_limits(
-        source_bigquery_table,
+        source_bigquery_table_id,
         average_upper_limit_amount_change,
         average_upper_limit_percentage_change, daily_upper_limit_amount_change,
         daily_upper_limit_percentage_change,
