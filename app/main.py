@@ -16,7 +16,6 @@ def check_limits(
         datetime.utcnow() - timedelta(days=int(days_to_average)), "%Y-%m-%d")
     today = datetime.strftime(
         datetime.utcnow(), "%Y-%m-%d")
-    print(n_days_ago, today)
 
     # Construct a BigQuery client object.
     client = bigquery.Client()
@@ -39,7 +38,8 @@ def check_limits(
         results_df['project'] = results_df.project.apply(lambda p: p['id'])
 
         # Sum daily results
-        agg_results_df = results_df.groupby(['usage_day']).sum()
+        agg_results_df = results_df.groupby(
+            ['usage_day']).sum(numeric_only=True)
         agg_results_df.reset_index(inplace=True)
         agg_results_df.sort_values('usage_day', ascending=True)
 
@@ -48,7 +48,11 @@ def check_limits(
         before_latest_data = agg_results_df.iloc[-2]
 
         slack_msg = {
-            "title": f"GCP billing summary for {latest_data.usage_day}", "body": ""}
+            "title": f"GCP billing summary for {latest_data.usage_day}",
+            "body_title": f"Total bill for {latest_data.usage_day} was {round(latest_data.cost, 2)} {currency}.",
+            "billing_date": latest_data.usage_day,
+            "body": ""
+            }
 
         if average_upper_limit_amount_change:
             if (avrg_change := latest_data.cost -
@@ -73,6 +77,8 @@ def check_limits(
 
         if slack_msg["body"]:
             send_slack_message(slack_msg)
+        else:
+            print(f"No billing limits were exceeded for {latest_data.usage_day}.")
     else:
         print("Query parameters returned no results!")
 
