@@ -20,9 +20,10 @@ def check_limits(
 
     # Build query
     query = f"""
-        SELECT project, usage_start_time, usage_end_time, cost, currency
+        SELECT DATE(usage_end_time) as usage_day, sum(cost) as cost, max(currency) as currency
         FROM `{source_bigquery_table_id}`
         WHERE usage_start_time >= '{n_days_ago}'
+        GROUP BY usage_day ORDER BY usage_day
     """
     query_job = client.query(query)  # Make an API request.
     # Convert results into a Pandas DataFrame
@@ -31,19 +32,11 @@ def check_limits(
     if not results_df.empty and len(results_df) > 1:
         currency = results_df.iloc[0].currency
 
-        results_df["usage_day"] = results_df.usage_end_time.apply(
-            lambda dd: dd.date)
-        results_df['project'] = results_df.project.apply(lambda p: p['id'])
+        results_df.sort_values('usage_day', ascending=True)
 
-        # Sum daily results
-        agg_results_df = results_df.groupby(
-            ['usage_day']).sum(numeric_only=True)
-        agg_results_df.reset_index(inplace=True)
-        agg_results_df.sort_values('usage_day', ascending=True)
-
-        average_cost = agg_results_df.iloc[:-1].cost.mean()
-        latest_data = agg_results_df.iloc[-1]
-        before_latest_data = agg_results_df.iloc[-2]
+        average_cost = results_df.iloc[:-1].cost.mean()
+        latest_data = results_df.iloc[-1]
+        before_latest_data = results_df.iloc[-2]
 
         slack_msg = {
             "title": f"GCP billing summary for {latest_data.usage_day}",
@@ -73,8 +66,8 @@ def check_limits(
                 slack_msg["body"] += (
                     f"- Exceeded that of *{before_latest_data.usage_day}* by *{round(daily_perc_change, 2)}%*\n")
 
-        if len(agg_results_df) < int(days_to_average):
-            slack_msg["pretext"] = f"Only {len(agg_results_df)}/{days_to_average} days of data is available in BigQuery."
+        if len(results_df) < int(days_to_average):
+            slack_msg["pretext"] = f"Only {len(results_df)}/{days_to_average} days of data is available in BigQuery."
         
         if slack_msg["body"]:
             send_slack_message(slack_msg)
