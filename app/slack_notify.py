@@ -4,7 +4,7 @@ from slack_sdk.webhook import WebhookClient
 
 
 def send_slack_message(msg):
-    slack_webhook_url = os.environ['SLACK_WEBHOOK_URL']
+    slack_webhook_url = os.environ.get('SLACK_WEBHOOK_URL')
     try:
         if slack_webhook_url:
             webhook = WebhookClient(slack_webhook_url)
@@ -29,5 +29,5 @@ def send_slack_message(msg):
             print(f"Sent GCP billing summary for {msg['billing_date']} to Slack channel.")
         else:
             print("Could not send slack message, please pass SLACK_WEBHOOK_URL")
-    except Exception as e:
-        print(f"Encountered error when sending Slack message: {e}")
+    except Exception as slackErr:
+        print(f"Encountered error when sending Slack message: {slackErr}")

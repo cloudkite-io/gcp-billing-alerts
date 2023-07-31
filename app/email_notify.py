@@ -4,14 +4,17 @@ from sendgrid.helpers.mail import Mail
 
 
 def send_email(msg):
-    try:
+    try:     
+        sender = os.environ.get('EMAIL_SENDER')
+        recipients = os.environ.get('EMAIL_RECIPIENTS')
         sendgrid_api_key = os.environ.get('SENDGRID_API_KEY')
-        email_source = os.environ.get('EMAIL_SOURCE')
-        recipient = os.environ.get('EMAIL_RECIPIENTS')
-        if sendgrid_api_key and email_source and recipient:
+
+        if sendgrid_api_key and sender and recipients:
+            recipients = recipients.replace(" ", "")
+            recipients = recipients.split(",")
             message = Mail(
-            from_email='',
-            to_emails=recipient,
+            from_email=sender,
+            to_emails=recipients,
             subject=msg["title"],
             html_content=msg["body"])
             
@@ -22,5 +25,5 @@ def send_email(msg):
             print(response.headers)
         else:
             print("Could not send email, please pass SENDGRID_API_KEY, EMAIL_SOURCE and EMAIL_RECIPIENTS")
-    except Exception as e:
-        print("Error sending email: {e.message}")
+    except Exception as emailErr:
+        print(f"Error sending email: {emailErr}")
