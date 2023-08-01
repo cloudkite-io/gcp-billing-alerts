@@ -2,7 +2,6 @@ import os
 from slack_sdk.webhook import WebhookClient
 
 
-
 def send_slack_message(msg):
     slack_webhook_url = os.environ.get('SLACK_WEBHOOK_URL')
     try:
@@ -17,7 +16,8 @@ def send_slack_message(msg):
                         "pretext": msg.get("pretext", ""),
                         "fields": [
                             {
-                                "value": msg["body"],
+                                "title": msg["body_title"],
+                                "value": msg["slack_body"],
                                 "short": False
                             },
                         ],

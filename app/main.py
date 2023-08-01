@@ -12,7 +12,7 @@ def check_limits(
     days_to_average,
 ):
     n_days_ago = datetime.strftime(
-        datetime.utcnow() - timedelta(days=int(days_to_average + 1)), "%Y-%m-%d")
+        datetime.utcnow() - timedelta(days=(days_to_average+1)), "%Y-%m-%d")
 
     # Construct a BigQuery client object.
     client = bigquery.Client()
@@ -32,11 +32,12 @@ def check_limits(
         last_complete_day = date.today() - timedelta(1)
         currency = results_df.iloc[0].currency
 
-        slack_msg = {
-            "title": f"GCP billing summary for {last_complete_day}",
-            "billing_date": last_complete_day,
-            "body": ""
-            }
+        alert_msg = {
+                        "title": f"GCP billing alerts for {last_complete_day}",
+                        "billing_date": last_complete_day,
+                        "slack_body": "",
+                        "body_title": f"Below are the Project-SKUs that exceeded {days_to_average}-day average/max on {last_complete_day}:"
+                    }
 
         changes_list = []
         for group_id, sku_project_df in results_df.groupby(["sku_id", "project"]):
@@ -60,9 +61,10 @@ def check_limits(
                                 "project_id": project_id,
                                 "sku_id": sku_id,
                                 "sku_description": sku_description,
+                                "spend": round(last_complete_day_cost, 2),
+                                "change_type": "average",
                                 "change": round(change, 2),
                                 "perc_change": round(perc_change, 2),
-                                "change_type": "average",
                             })
                     if last_complete_day_cost > max_cost:
                         change = last_complete_day_cost - max_cost
@@ -72,25 +74,23 @@ def check_limits(
                                 "project_id": project_id,
                                 "sku_id": sku_id,
                                 "sku_description": sku_description,
+                                "spend": round(last_complete_day_cost, 2),
+                                "change_type": "max",
                                 "change": round(change, 2),
                                 "perc_change": round(perc_change, 2),
-                                "change_type": "max",
                             })
         changes_list = sorted(changes_list, key=lambda d: d['change'])
 
-        if len(results_df.usage_day.unique() - 2) < int(days_to_average):
-            slack_msg["pretext"] = f"Only {len(results_df.usage_day.unique() - 2)}/{days_to_average} days of data is available in BigQuery."
+        if (len(results_df.usage_day.unique()) - 2) < days_to_average:
+            alert_msg["pretext"] = f"Only {len(results_df.usage_day.unique() - 2)}/{days_to_average} days of data is available in BigQuery."
         
         if len(changes_list):
-            email_msg = ""
             for change in changes_list:
-                slack_msg["body"] += (f"- '{change['sku_description']}' exceeded the last *{days_to_average}-day*" + 
-                    f" {change['change_type']} by *{change['perc_change']}%* ({change['change']} {currency})\n")
-                email_msg += (f"- <i>{change['sku_description']}</i> exceeded the last <strong>{days_to_average}-day</strong>" + 
-                    f" {change['change_type']} by <strong>{change['perc_change']}%</strong> ({change['change']} {currency})\n")
-
-            send_email(email_msg)
-            send_slack_message(slack_msg)
+                alert_msg["slack_body"] += (f"- '{change['sku_description']}' exceeded the last *{days_to_average}-day*" + 
+                    f" {change['change_type']} in *{change['project_id']}* by *{change['perc_change']}%* ({currency} {change['change']} more)\n")
+            
+            send_slack_message(alert_msg)
+            send_email(changes_list, days_to_average, currency, alert_msg)
         else:
             print(f"No billing limits have been exceeded on {last_complete_day}.")
     else:
@@ -108,8 +108,8 @@ def main():
             ")
     check_limits(
         source_bigquery_table_id,
-        change_threshold,
-        days_to_average,
+        int(change_threshold),
+        int(days_to_average),
     )
 
 
