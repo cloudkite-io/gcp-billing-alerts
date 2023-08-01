@@ -1,6 +1,6 @@
-This application sends Slack/Email alerts when the day's Project-SKU cost is greater than the max/average spend over the past N days.
+This application sends Slack/Email alerts displaying the GCP Project-SKUs that have exceeded the maximum/average spend over the last N days.
 
-If you'd like to get organization-level billing alerts, see []()
+If you'd like to receive organization-level billing alerts instead, see [organization level alerts](https://github.com/cloudkite-io/gcp-billing-alerts/tree/org-level-alerts)
 
 # Prerequisites.
 1. Export cloud billing data to BigQuery.  
