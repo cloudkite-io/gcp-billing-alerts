@@ -40,5 +40,5 @@ A `sample.env` file is provided in the root folder to be used as a template for 
 You can access the Docker image of this application here:  
 
 ```
-gcr.io/cloudkite-public/gcp-billing-alerts:latest
+gcr.io/cloudkite-public/gcp-billing-alerts:org-level-alerts
 ```
