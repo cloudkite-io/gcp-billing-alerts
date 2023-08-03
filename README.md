@@ -26,6 +26,7 @@ The table below shows the input parameters which should be set as environment va
 | SOURCE_BIGQUERY_TABLE_ID | The Table ID for the BigQuery table where the standard billing report is configured to export data (see step 1 of prerequisites). The table ID will be in the format `<Project ID>.<Dataset Name>.<Table Name>` | Yes |  |
 | SLACK_WEBHOOK_URL | The Slack Webhook URL obtained from step 2 of prerequisites. This is the URL that allows the app to post messages to your Slack channel. | No |  |
 | DAYS_TO_AVERAGE | The number of days before the current day whose cost should be used for comparison. | No | 30 |
+| ALERT_METRIC | The metric on which alerts should be based. Options are: `all`, `mean`, `max`.  For instance, if `max` is selected, alerts will be sent when the day's cost exceeds the N-day max. In the case of `all`, both the N-day mean and N-day max are used to determine if alerts will be triggered.| No | `all` |
 | CHANGE_THRESHOLD | This is used to determine how much above the average/max spend over `DAYS_TO_AVERAGE` days should trigger an alert. e.g. If `CHANGE_THRESHOLD` is set to 10, a Slack message and email will be sent if the current day's cost is 10/= above the average/max cost for the past `DAYS_TO_AVERAGE` days. | No | 0 |
 | SENDGRID_API_KEY | The SendGrid API key obtained from step 3 of prerequisites. This is the key that allows the app to send email alerts. | No |  |
 | EMAIL_SENDER | The email that will appear as the sender of email alerts sent by the application via SendGrid. Must be provided to send emails. | No |  |
