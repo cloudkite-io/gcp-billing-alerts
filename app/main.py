@@ -10,6 +10,7 @@ def check_limits(
     source_bigquery_table_id,
     change_threshold,
     days_to_average,
+    alert_metric,
 ):
     n_days_ago = datetime.strftime(
         datetime.utcnow() - timedelta(days=(days_to_average+1)), "%Y-%m-%d")
@@ -36,7 +37,7 @@ def check_limits(
                         "title": f"GCP billing alerts for {last_complete_day}",
                         "billing_date": last_complete_day,
                         "slack_body": "",
-                        "body_title": f"Below are the Project-SKUs that exceeded {days_to_average}-day average/max on {last_complete_day}:"
+                        "body_title": f"Below are the Project-SKUs that exceeded {days_to_average}-day {'average/max' if alert_metric == 'all' else alert_metric} on {last_complete_day}:"
                     }
 
         changes_list = []
@@ -47,38 +48,45 @@ def check_limits(
             last_complete_day_df = sku_project_df[sku_project_df.usage_day == last_complete_day]
             if len(last_complete_day_df):
                 last_complete_day_cost = sku_project_df[sku_project_df.usage_day == last_complete_day].cost.item()
-                average_cost_df = sku_project_df[sku_project_df.usage_day < last_complete_day]
-                if len(average_cost_df):
-                    average_cost = average_cost_df.cost.mean()
-                    max_cost = average_cost_df.cost.max()
-                    
-                    sku_description = average_cost_df.iloc[0].sku_description
-                    if last_complete_day_cost > average_cost:
-                        change = last_complete_day_cost - average_cost
-                        perc_change = (change/average_cost)*100
-                        if change >= change_threshold:
-                            changes_list.append({
-                                "project_id": project_id,
-                                "sku_id": sku_id,
-                                "sku_description": sku_description,
-                                "spend": round(last_complete_day_cost, 2),
-                                "change_type": "average",
-                                "change": round(change, 2),
-                                "perc_change": round(perc_change, 2),
-                            })
-                    if last_complete_day_cost > max_cost:
-                        change = last_complete_day_cost - max_cost
-                        perc_change = (change/max_cost)*100
-                        if change >= change_threshold:
-                            changes_list.append({
-                                "project_id": project_id,
-                                "sku_id": sku_id,
-                                "sku_description": sku_description,
-                                "spend": round(last_complete_day_cost, 2),
-                                "change_type": "max",
-                                "change": round(change, 2),
-                                "perc_change": round(perc_change, 2),
-                            })
+                metric_df = sku_project_df[sku_project_df.usage_day < last_complete_day]
+                if len(metric_df):
+                    sku_description = metric_df.iloc[0].sku_description
+                    if alert_metric in ["all", "mean"]:
+                        average_cost = metric_df.cost.mean()
+                        if last_complete_day_cost > average_cost:
+                            change = last_complete_day_cost - average_cost
+                            if average_cost:
+                                perc_change = round(((change/average_cost)*100), 2)
+                            else:
+                                perc_change = "inf"
+                            if change >= change_threshold:
+                                changes_list.append({
+                                    "project_id": project_id,
+                                    "sku_id": sku_id,
+                                    "sku_description": sku_description,
+                                    "spend": round(last_complete_day_cost, 2),
+                                    "change_type": "average",
+                                    "change": round(change, 2),
+                                    "perc_change": perc_change,
+                                })
+                    if alert_metric in ["all", "max"]:
+                        max_cost = metric_df.cost.max()
+                        if last_complete_day_cost > max_cost:
+                            change = last_complete_day_cost - max_cost
+                            if max_cost:
+                                perc_change = round(((change/max_cost)*100), 2)
+                            else:
+                                perc_change = "inf"
+                            if change >= change_threshold:
+                                changes_list.append({
+                                    "project_id": project_id,
+                                    "sku_id": sku_id,
+                                    "sku_description": sku_description,
+                                    "spend": round(last_complete_day_cost, 2),
+                                    "change_type": "max",
+                                    "change": round(change, 2),
+                                    "perc_change": perc_change,
+                                })
         changes_list = sorted(changes_list, key=lambda d: d['change'])
 
         if (len(results_df.usage_day.unique()) - 2) < days_to_average:
@@ -101,15 +109,18 @@ def main():
     source_bigquery_table_id = os.environ['SOURCE_BIGQUERY_TABLE_ID']
     days_to_average = os.getenv('DAYS_TO_AVERAGE', 30)
     change_threshold = os.getenv('CHANGE_THRESHOLD', 0)
+    alert_metric = os.getenv('ALERT_METRIC', "all")
     print(f"Checking GCP billing limits:\n\
             source_bigquery_table_id: {source_bigquery_table_id}\n\
             days_to_average: {days_to_average}\n\
             change_threshold: {change_threshold}\n\
+            alert_metric: {alert_metric}\n\
             ")
     check_limits(
         source_bigquery_table_id,
         int(change_threshold),
         int(days_to_average),
+        alert_metric.lower(),
     )
 
 
