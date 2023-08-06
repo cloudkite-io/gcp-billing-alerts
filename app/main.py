@@ -20,7 +20,7 @@ def check_limits(
 
     # Build query
     query = f"""
-        SELECT DATE(usage_end_time) as usage_day, sku.id AS sku_id, sku.description AS sku_description, project.id as project, sum(cost) as cost, max(currency) as currency 
+        SELECT DATE(usage_end_time) as usage_day, sku.id AS sku_id, sku.description AS sku_description, project.id as project, sum(CAST(cost AS NUMERIC)) as cost, max(currency) as currency 
         FROM `{source_bigquery_table_id}`
         WHERE usage_start_time >= '{n_days_ago}'
         GROUP BY usage_day, project, sku_id, sku_description ORDER BY usage_day
