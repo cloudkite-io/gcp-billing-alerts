@@ -1,0 +1,19 @@
+# cloudbuild.yaml
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'build',
+        '-t',
+        'gcr.io/cloudkite-public/gcp-billing-alerts:20260212.1637-latest',
+        '.'
+      ]
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'push',
+        'gcr.io/cloudkite-public/gcp-billing-alerts:20260212.1637-latest'
+      ]
+images:
+  - 'gcr.io/cloudkite-public/gcp-billing-alerts:20260212.1637-latest'

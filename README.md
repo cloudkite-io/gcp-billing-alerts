@@ -40,3 +40,11 @@ You can pull the Docker image of this application here:
 ```
 gcr.io/cloudkite-public/gcp-billing-alerts:latest
 ```
+
+You can build the Docker image:
+```
+gcloud builds submit --config build-image.yaml . --project=cloudkite-public
+```
+
+## For support:
+Ask CK or file and issue. Thanks!

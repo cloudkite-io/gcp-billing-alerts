@@ -90,7 +90,7 @@ def check_limits(
         changes_list = sorted(changes_list, key=lambda d: d['change'])
 
         if (len(results_df.usage_day.unique()) - 2) < days_to_average:
-            alert_msg["pretext"] = f"Only {len(results_df.usage_day.unique() - 2)}/{days_to_average} days of data is available in BigQuery."
+            alert_msg["pretext"] = f"Only {len(results_df.usage_day.unique()) - 2}/{days_to_average} days of data is available in BigQuery."
         
         if len(changes_list):
             for change in changes_list:
