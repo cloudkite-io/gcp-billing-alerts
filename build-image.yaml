@@ -5,7 +5,7 @@ steps:
       [
         'build',
         '-t',
-        'gcr.io/cloudkite-public/gcp-billing-alerts:20260212.1637-latest',
+        'gcr.io/cloudkite-public/gcp-billing-alerts:20260212.1836',
         '.'
       ]
 
@@ -13,7 +13,7 @@ steps:
     args:
       [
         'push',
-        'gcr.io/cloudkite-public/gcp-billing-alerts:20260212.1637-latest'
+        'gcr.io/cloudkite-public/gcp-billing-alerts:20260212.1836'
       ]
 images:
-  - 'gcr.io/cloudkite-public/gcp-billing-alerts:20260212.1637-latest'
+  - 'gcr.io/cloudkite-public/gcp-billing-alerts:20260212.1836'
