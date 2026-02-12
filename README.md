@@ -44,6 +44,8 @@ gcr.io/cloudkite-public/gcp-billing-alerts:latest
 You can build the Docker image:
 ```
 gcloud builds submit --config build-image.yaml . --project=cloudkite-public
+
+#PS: Don't forget to update the tag in the build-image.yaml file before running command.
 ```
 
 ## For support:
